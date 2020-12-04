@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#292b2c"/>
+    <meta name="description" content="Send GET request from browser to web server esp8266 soft AP ">
+    <meta name="keywords" content="esp8266,get request, webserver, ap">
+    <meta name="author" content="Andriy Kasandyuk">
+    <meta name="robots" content="index, follow">
+    <!--    Open Graph Protocol-->
+    <meta property="og:type" content="website"/>
+    <meta property="og:title" content="ESP8266 send GET request to web server AP"/>
+    <meta property="og:description" content="Send GET request from browser to web server esp8266 soft AP "/>
+    <meta property="og:url" content="https://esp8266f.github.io/esp8266-send-get-request-to-web-server-ap.html"/>
+    <meta property="og:site_name" content="esp8266f.github.io"/>
+    <meta property="og:image" content="https://esp8266f.github.io/logo.png"/>
+    <title>ESP8266 send GET request to web server AP</title>
+    <!--    SCRIPT BLOCK   start    -->
+    <link rel="canonical" href="https://esp8266f.github.io/esp8266-send-get-request-to-web-server-ap.html"/>
+    <link rel="shortcut icon" href="/logo.png" type="image/png"/>
+    <link rel="stylesheet" href="/_cms_/template/default/css/style.css">
+    <!--    SCRIPT BLOCK 2          -->
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.9/styles/default.min.css">
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.9/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+<div class="container">
+    <header class="item header">
+        <a class="navbar-brand" href="/">ESP8266F.github.io</a>
+    </header>
+    <nav class="item left_menu">left_menu</nav>
+    <div class="item right_menu">right_menu</div>
+    <main class="item content">
+        <h1>ESP8266 send GET request to web server AP</h1>
+<p>Send request from browser to esp8266 AP web server.</p>
+<p><strong>esp8266_server_get_request.ino</strong></p>
+<pre><code class="language-c++">#include "LIB_WIFI.h"
+
+void setup() {
+  setup_wifi();               // wifi
+  setup_server_request();     // server request
+}
+
+void loop() {
+  loop_server_get_client_request();
+
+}</code></pre>
+<p><strong>LIB_WIFI.h</strong></p>
+<pre><code class="language-c++">/* 
+   Author: Andriy Kasandyuk 
+   Site:   esp8266f.github.io
+   Mail:   a.kasandyuk@gmail.com
+*/
+
+#include &lt;ESP8266WiFi.h&gt;
+#include &lt;WiFiClient.h&gt;
+#include &lt;ESP8266WebServer.h&gt;
+
+const char* ssid = "WIFI";              // SSID
+const char* password = "aaaa1234AAAA";  // password
+
+/* setup IP address */                  // browser IP   192.168.1.4
+IPAddress local_ip(192, 168, 1, 4);
+IPAddress gateway(192, 168, 1, 4);
+IPAddress subnet(255, 255, 255, 0);
+ESP8266WebServer server(80);
+
+//=========================================================== HTML
+
+const char index_html[] PROGMEM = R"rawliteral(
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Web server&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;p id="time"&gt;%TIME%&lt;/p&gt;
+&lt;p id="temperaturec"&gt;%TEMP%&lt;/p&gt;
+&lt;p id="dht_temp"&gt;%DHT_TEMP%&lt;/p&gt;
+&lt;p id="dht_humid"&gt;%DHT_HUMID%&lt;/p&gt;
+&lt;p id="a0"&gt;%A0%&lt;/p&gt;
+
+&lt;script&gt;
+
+function show(obj){
+    document.getElementById("time").innerHTML = "Time: " + obj.time;
+    document.getElementById("temperaturec").innerHTML = "DS18B20 temp: " + obj.tempDS18B20 + " C";
+    document.getElementById("dht_temp").innerHTML = "dht temp: " + obj.dht_temp + " C";
+    document.getElementById("dht_humid").innerHTML = "dht humid: " + obj.dht_humid + " %";
+    document.getElementById("a0").innerHTML = "A0: " + obj.a0;
+}
+
+function getJson(){
+  setInterval(() =&gt; {
+        fetch('/json')
+          .then((response) =&gt; {
+              return response.json();
+           })
+          .then((data) =&gt; {
+              console.log(data);
+              show(data);
+          });
+
+  }, 1000);
+
+};
+
+getJson();
+
+&lt;/script&gt;
+
+
+&lt;/body&gt;
+&lt;/html&gt;)rawliteral";
+
+String json() {
+  String json_data = "{";
+//  json_data += "\"time\": \""         + String(ds3231_time_string)          + "\",";
+//  json_data += "\"a0\": \""           + String(a0_data)                     + "\",";
+//  json_data += "\"dht_humid\": \""    + String(dht_humidity_string)         + "\",";
+//  json_data += "\"dht_temp\": \""     + String(dht_temperature_string)      + "\",";
+//  json_data += "\"tempDS18B20\": \""  + String(ds18b20_temperature_string)  + "\"";
+  json_data += "}";
+  return String(json_data);
+}
+
+//======================================== server HTML handle
+
+void handle_main_page() {
+  server.send(200, "text/html", index_html);
+}
+
+void handle_json() {
+  server.send(200, "text/plain", json());
+}
+
+void handle_NotFound() {
+  server.send(404, "text/plain", "Not found");
+}
+
+//======================================== server HTML handle get parameters request
+
+// Result of accessing the /args URL without query parameters.                           =&gt; /args
+// Result of accessing the /args?day=25&amp;month=1&amp;year=2021 URL with 3 query parameters.   =&gt; /args?day=25&amp;month=1&amp;year=2021
+void handleGenericArgs() {
+  String message = "Number of args received: ";
+         message += server.args();                   // Get number of parameters
+         message += "\n";                            // Add a new line
+
+  for (int i = 0; i &lt; server.args(); i++) {
+        message += "[" + String(i) + "] =&gt; ";        // Include the current iteration value
+        message += server.argName(i) + ": ";         // Get the name of the parameter
+        message += server.arg(i) + "\n";             // Get the value of the parameter
+  } 
+
+  server.send(200, "text/plain", message);           // Response to the HTTP request
+}
+
+//---------------------------------------------------------------------------------------
+
+//      /arg?temperature=10
+void handleSpecificArg() { 
+    String message = "";
+    if (server.arg("temperature") == ""){               // Parameter not found
+        message = "Temperature Argument not found";
+    }else{     
+        // Parameter found
+        message = "Temperature Argument = ";
+        message += server.arg("temperature");           // Gets the value of the query parameter
+    }
+
+    server.send(200, "text/plain", message);            // Returns the HTTP response
+}
+
+//=======================================================================================
+
+void setup_server_request() {
+  server.on("/", HTTP_GET, handle_main_page);
+  server.on("/json", HTTP_GET, handle_json);
+
+  // get request parameters
+  server.on("/args", HTTP_GET, handleGenericArgs);    // Associate the handler function to the path
+  server.on("/arg", HTTP_GET, handleSpecificArg);     // Associate the handler function to the path
+
+  server.onNotFound(handle_NotFound);
+  server.begin();                                     // Start the server
+}
+
+//=======================================================================================
+
+void loop_server_get_client_request() {
+  server.handleClient();                           // Handling of incoming requests
+}
+
+//=======================================================================================
+
+void setup_wifi() {
+  WiFi.softAP(ssid, password, 12);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  delay(100);
+}</code></pre>
+    </main>
+
+    <footer class="item footer">
+        <p class="white">Author: Andriy Kasandyuk</p>
+        <p><a href="mailto:a.kasandyuk@gmail.com">a.kasandyuk@gmail.com</a></p>
+    </footer>
+</div>
+</body>
+</html>
